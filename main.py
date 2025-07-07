@@ -65,12 +65,28 @@ class ParkingEnforcerApp:
                 self.logger.info("Parking enforcement system started successfully")
                 
                 # Check if camera is working
-                if not self.parking_monitor.camera or not self.parking_monitor.camera.isOpened():
+                if not self.parking_monitor.camera:
                     self.logger.warning("Camera not available - system running without camera monitoring")
                     print("\n⚠️  Camera not available!")
                     print("The camera may be in use by other processes (like PipeWire).")
                     print("Run 'python3 fix_camera_conflict.py' to resolve camera conflicts.")
                     print("The web interface will still work for viewing parking data.\n")
+                else:
+                    # Test if camera is actually working by trying to read a frame
+                    try:
+                        test_frame = self.parking_monitor.camera.capture_array()
+                        if test_frame is None or test_frame.size == 0:
+                            self.logger.warning("Camera opened but cannot read frames - may be in use by other processes")
+                            print("\n⚠️  Camera opened but cannot read frames!")
+                            print("The camera may be in use by other processes (like PipeWire).")
+                            print("Run 'python3 fix_camera_conflict.py' to resolve camera conflicts.")
+                            print("The web interface will still work for viewing parking data.\n")
+                    except Exception as e:
+                        self.logger.warning(f"Camera test failed: {e}")
+                        print("\n⚠️  Camera test failed!")
+                        print("The camera may be in use by other processes (like PipeWire).")
+                        print("Run 'python3 fix_camera_conflict.py' to resolve camera conflicts.")
+                        print("The web interface will still work for viewing parking data.\n")
                 
                 # Main application loop
                 self.main_loop()
