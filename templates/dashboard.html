@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Parking Enforcer - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-car"></i> Pi Parking Enforcer
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text" id="status-indicator">
+                    <i class="fas fa-circle text-warning"></i> Initializing...
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Control Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cogs"></i> System Control
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <button id="startBtn" class="btn btn-success btn-lg w-100">
+                                    <i class="fas fa-play"></i> Start Monitoring
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="stopBtn" class="btn btn-danger btn-lg w-100" disabled>
+                                    <i class="fas fa-stop"></i> Stop Monitoring
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="refreshBtn" class="btn btn-info btn-lg w-100">
+                                    <i class="fas fa-sync-alt"></i> Refresh Data
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="settingsBtn" class="btn btn-secondary btn-lg w-100">
+                                    <i class="fas fa-cog"></i> Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Total Spots</h6>
+                                <h3 id="totalSpots">-</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-parking fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Occupied Spots</h6>
+                                <h3 id="occupiedSpots">-</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-car fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Occupancy Rate</h6>
+                                <h3 id="occupancyRate">-</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-percentage fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Avg Duration</h6>
+                                <h3 id="avgDuration">-</h3>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-clock fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Live Video Feed -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-video"></i> Live Camera Feed
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="video-container">
+                            <img id="videoFeed" src="{{ url_for('video_feed') }}" 
+                                 alt="Live camera feed" class="img-fluid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list"></i> Active Sessions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="activeSessionsList">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                <p>Loading sessions...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line"></i> Occupancy Chart
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center">
+                            <img id="occupancyChart" src="" alt="Occupancy Chart" 
+                                 class="img-fluid" style="max-width: 100%;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cog"></i> System Settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Camera Settings</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Camera Index</label>
+                                <input type="number" class="form-control" id="cameraIndex" value="0">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Detection Interval (seconds)</label>
+                                <input type="number" class="form-control" id="detectionInterval" value="5">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Alert Settings</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Slack Alert Threshold (hours)</label>
+                                <input type="number" class="form-control" id="alertThreshold" value="5">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Confidence Threshold</label>
+                                <input type="number" class="form-control" id="confidenceThreshold" 
+                                       value="0.5" step="0.1" min="0" max="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSettings">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html> 
