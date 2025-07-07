@@ -23,19 +23,11 @@ class ParkingMonitor:
         # Track active sessions
         self.active_sessions = {}  # spot_id -> session_data
         
+        # Setup logger
+        self.logger = logging.getLogger(__name__)
+        
         # Load existing active sessions
         self._load_active_sessions()
-        
-        # Setup logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler('parking_monitor.log'),
-                logging.StreamHandler()
-            ]
-        )
-        self.logger = logging.getLogger(__name__)
     
     def _load_active_sessions(self):
         """Load existing active sessions from database"""
