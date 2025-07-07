@@ -9,6 +9,13 @@ from database import ParkingDatabase
 from car_detector import CarDetector
 from slack_integration import SlackIntegration
 
+# Try to import picamera2, fallback to OpenCV if not available
+try:
+    from picamera2 import Picamera2
+    PICAMERA2_AVAILABLE = True
+except ImportError:
+    PICAMERA2_AVAILABLE = False
+
 class ParkingMonitor:
     def __init__(self):
         self.database = ParkingDatabase()
@@ -17,6 +24,7 @@ class ParkingMonitor:
         
         # Camera setup
         self.camera = None
+        self.picam2 = None
         self.is_running = False
         self.monitor_thread = None
         
@@ -38,6 +46,43 @@ class ParkingMonitor:
     
     def start_camera(self):
         """Initialize and start the camera"""
+        try:
+            if PICAMERA2_AVAILABLE:
+                return self._start_picamera2()
+            else:
+                return self._start_opencv_camera()
+        except Exception as e:
+            self.logger.error(f"Failed to initialize camera: {e}")
+            return False
+    
+    def _start_picamera2(self):
+        """Initialize camera using picamera2"""
+        try:
+            self.picam2 = Picamera2()
+            
+            # Create configuration for the camera
+            config = self.picam2.create_preview_configuration(
+                main={"size": (Config.CAMERA_WIDTH, Config.CAMERA_HEIGHT)},
+                buffer_count=4
+            )
+            
+            self.picam2.configure(config)
+            self.picam2.start()
+            
+            # Test reading a frame to ensure camera is working
+            test_frame = self.picam2.capture_array()
+            if test_frame is None or test_frame.size == 0:
+                raise Exception("Camera opened but cannot read frames")
+            
+            self.logger.info(f"Camera initialized successfully with picamera2 - Frame shape: {test_frame.shape}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize picamera2: {e}")
+            return False
+    
+    def _start_opencv_camera(self):
+        """Initialize camera using OpenCV (fallback)"""
         try:
             # Try V4L2 backend first (recommended for Raspberry Pi)
             self.camera = cv2.VideoCapture(Config.CAMERA_INDEX, cv2.CAP_V4L2)
@@ -66,19 +111,41 @@ class ParkingMonitor:
             if not ret:
                 raise Exception("Camera opened but cannot read frames")
             
-            self.logger.info(f"Camera initialized successfully - Frame shape: {test_frame.shape}")
+            self.logger.info(f"Camera initialized successfully with OpenCV - Frame shape: {test_frame.shape}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to initialize camera: {e}")
+            self.logger.error(f"Failed to initialize OpenCV camera: {e}")
             return False
     
     def stop_camera(self):
         """Stop and release the camera"""
-        if self.camera:
+        if self.picam2:
+            self.picam2.stop()
+            self.picam2 = None
+        elif self.camera:
             self.camera.release()
             self.camera = None
         self.logger.info("Camera stopped")
+    
+    def read_frame(self):
+        """Read a frame from the camera"""
+        if self.picam2:
+            try:
+                frame = self.picam2.capture_array()
+                if frame is not None and frame.size > 0:
+                    # Convert from RGB to BGR for OpenCV compatibility
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                    return True, frame
+                else:
+                    return False, None
+            except Exception as e:
+                self.logger.error(f"Error reading frame from picamera2: {e}")
+                return False, None
+        elif self.camera:
+            return self.camera.read()
+        else:
+            return False, None
     
     def start_monitoring(self):
         """Start the parking monitoring process"""
@@ -150,13 +217,13 @@ class ParkingMonitor:
     
     def _check_all_spots(self):
         """Check all parking spots for cars"""
-        if not self.camera or not self.camera.isOpened():
+        if not self.picam2 and (not self.camera or not self.camera.isOpened()):
             # Only log this error occasionally to avoid spam
             if int(time.time()) % 60 == 0:  # Every minute
                 self.logger.warning("Camera not available - skipping spot detection")
             return
         
-        ret, frame = self.camera.read()
+        ret, frame = self.read_frame()
         if not ret:
             # Only log this error occasionally to avoid spam
             if int(time.time()) % 30 == 0:  # Every 30 seconds

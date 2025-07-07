@@ -90,9 +90,8 @@ class ParkingEnforcerApp:
         while self.is_running:
             try:
                 # Update camera frame for web interface
-                if (self.parking_monitor.camera and 
-                    self.parking_monitor.camera.isOpened()):
-                    ret, frame = self.parking_monitor.camera.read()
+                if self.parking_monitor:
+                    ret, frame = self.parking_monitor.read_frame()
                     if ret:
                         update_camera_frame(frame)
                     else:
