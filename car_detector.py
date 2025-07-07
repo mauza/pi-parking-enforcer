@@ -20,7 +20,13 @@ class CarDetector:
     
     def detect_cars_in_frame(self, frame: np.ndarray) -> List[Dict]:
         """Detect cars in the entire frame"""
-        results = self.model(frame, verbose=False)
+        # Convert RGBA to RGB if needed for YOLO model
+        if frame.shape[2] == 4:  # RGBA
+            frame_rgb = frame[:, :, :3]  # Drop alpha channel
+        else:
+            frame_rgb = frame
+            
+        results = self.model(frame_rgb, verbose=False)
         detections = []
         
         for result in results:
@@ -81,6 +87,10 @@ class CarDetector:
         x, y, w, h = spot_coords
         spot_roi = frame[y:y+h, x:x+w].copy()
         
+        # Convert RGBA to RGB if needed for saving
+        if spot_roi.shape[2] == 4:  # RGBA
+            spot_roi = spot_roi[:, :, :3]  # Drop alpha channel
+        
         # Add detection box to the image
         bbox = detection['bbox']
         bbox_relative = (bbox[0] - x, bbox[1] - y, bbox[2] - x, bbox[3] - y)
@@ -116,6 +126,10 @@ class CarDetector:
         if car_roi.size == 0:
             return f"car_{uuid.uuid4().hex[:8]}"
         
+        # Convert RGBA to RGB if needed
+        if car_roi.shape[2] == 4:  # RGBA
+            car_roi = car_roi[:, :, :3]  # Drop alpha channel
+        
         # Create a simple hash based on the car's appearance
         # Resize to consistent size for hashing
         car_roi_resized = cv2.resize(car_roi, (64, 64))
@@ -137,7 +151,11 @@ class CarDetector:
     def draw_detections_on_frame(self, frame: np.ndarray, detections: List[Dict], 
                                spot_coords: Tuple[int, int, int, int] = None) -> np.ndarray:
         """Draw detection boxes and labels on the frame"""
-        frame_copy = frame.copy()
+        # Convert RGBA to RGB if needed for drawing
+        if frame.shape[2] == 4:  # RGBA
+            frame_copy = frame[:, :, :3].copy()  # Drop alpha channel
+        else:
+            frame_copy = frame.copy()
         
         # Draw spot boundary if provided
         if spot_coords:

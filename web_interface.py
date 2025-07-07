@@ -143,7 +143,14 @@ def video_feed():
             with frame_lock:
                 if camera_frame is not None:
                     # Convert numpy array to PIL Image and encode
-                    pil_image = Image.fromarray(camera_frame)
+                    # Handle RGBA frames by converting to RGB
+                    if camera_frame.shape[2] == 4:  # RGBA
+                        # Convert RGBA to RGB by dropping alpha channel
+                        rgb_frame = camera_frame[:, :, :3]
+                        pil_image = Image.fromarray(rgb_frame)
+                    else:
+                        pil_image = Image.fromarray(camera_frame)
+                    
                     img_buffer = io.BytesIO()
                     pil_image.save(img_buffer, format='JPEG', quality=85)
                     frame_data = img_buffer.getvalue()
