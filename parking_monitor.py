@@ -9,12 +9,6 @@ from database import ParkingDatabase
 from car_detector import CarDetector
 from slack_integration import SlackIntegration
 
-# Try to import picamera2, fallback to OpenCV if not available
-try:
-    from picamera2 import Picamera2
-    PICAMERA2_AVAILABLE = True
-except ImportError:
-    PICAMERA2_AVAILABLE = False
 
 class ParkingMonitor:
     def __init__(self):
@@ -22,9 +16,8 @@ class ParkingMonitor:
         self.car_detector = CarDetector()
         self.slack = SlackIntegration()
         
-        # Camera setup
+        # Camera setup - consolidated to OpenCV only
         self.camera = None
-        self.picam2 = None
         self.is_running = False
         self.monitor_thread = None
         
@@ -45,107 +38,70 @@ class ParkingMonitor:
         self.logger.info(f"Loaded {len(active_sessions)} active sessions")
     
     def start_camera(self):
-        """Initialize and start the camera"""
+        """Initialize and start the camera using OpenCV"""
         try:
-            if PICAMERA2_AVAILABLE:
-                return self._start_picamera2()
-            else:
-                return self._start_opencv_camera()
-        except Exception as e:
-            self.logger.error(f"Failed to initialize camera: {e}")
-            return False
-    
-    def _start_picamera2(self):
-        """Initialize camera using picamera2"""
-        try:
-            self.picam2 = Picamera2()
+            # Initialize camera with auto-detect backend
+            self.camera = cv2.VideoCapture(Config.CAMERA_INDEX)
             
-            # Create configuration for the camera
-            config = self.picam2.create_preview_configuration(
-                main={"size": (Config.CAMERA_WIDTH, Config.CAMERA_HEIGHT)},
-                buffer_count=4
-            )
+            if not self.camera.isOpened():
+                raise Exception("Failed to open camera")
             
-            self.picam2.configure(config)
-            self.picam2.start()
-            
-            # Test reading a frame to ensure camera is working
-            test_frame = self.picam2.capture_array()
-            if test_frame is None or test_frame.size == 0:
-                raise Exception("Camera opened but cannot read frames")
-            
-            self.logger.info(f"Camera initialized successfully with picamera2 - Frame shape: {test_frame.shape}")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to initialize picamera2: {e}")
-            return False
-    
-    def _start_opencv_camera(self):
-        """Initialize camera using OpenCV (fallback)"""
-        try:
-            # Try V4L2 backend first (recommended for Raspberry Pi)
-            self.camera = cv2.VideoCapture(Config.CAMERA_INDEX, cv2.CAP_V4L2)
-            
-            # Set camera properties
+            # Set camera properties for USB webcam
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, Config.CAMERA_WIDTH)
             self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
             self.camera.set(cv2.CAP_PROP_FPS, Config.FRAME_RATE)
             
-            # Additional V4L2 settings for Raspberry Pi camera
+            # Set buffer size to 1 to reduce latency
             self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
-            if not self.camera.isOpened():
-                # Try fallback to auto-detect backend
-                self.logger.warning("V4L2 backend failed, trying auto-detect...")
-                self.camera = cv2.VideoCapture(Config.CAMERA_INDEX)
-                self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, Config.CAMERA_WIDTH)
-                self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
-                self.camera.set(cv2.CAP_PROP_FPS, Config.FRAME_RATE)
-                
-                if not self.camera.isOpened():
-                    raise Exception("Failed to open camera with any backend")
+            # Try to set MJPG format for better compatibility
+            self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+            
+            # Allow camera to warm up
+            time.sleep(1)
             
             # Test reading a frame to ensure camera is working
             ret, test_frame = self.camera.read()
-            if not ret:
-                raise Exception("Camera opened but cannot read frames")
+            if not ret or test_frame is None:
+                # Try again with a longer delay
+                time.sleep(2)
+                ret, test_frame = self.camera.read()
+                if not ret or test_frame is None:
+                    raise Exception("Camera opened but cannot read frames")
             
             self.logger.info(f"Camera initialized successfully with OpenCV - Frame shape: {test_frame.shape}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to initialize OpenCV camera: {e}")
+            self.logger.error(f"Failed to initialize camera: {e}")
+            if self.camera:
+                self.camera.release()
+                self.camera = None
             return False
     
     def stop_camera(self):
         """Stop and release the camera"""
-        if self.picam2:
-            self.picam2.stop()
-            self.picam2 = None
-        elif self.camera:
+        if self.camera:
             self.camera.release()
             self.camera = None
         self.logger.info("Camera stopped")
     
     def read_frame(self):
         """Read a frame from the camera"""
-        if self.picam2:
-            try:
-                frame = self.picam2.capture_array()
-                if frame is not None and frame.size > 0:
-                    # Convert from RGB to BGR for OpenCV compatibility
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                    return True, frame
-                else:
-                    return False, None
-            except Exception as e:
-                self.logger.error(f"Error reading frame from picamera2: {e}")
-                return False, None
-        elif self.camera:
-            return self.camera.read()
-        else:
-            return False, None
+        if self.camera and self.camera.isOpened():
+            ret, frame = self.camera.read()
+            if ret and frame is not None:
+                return True, frame
+            else:
+                # Try to reinitialize camera if frame reading fails
+                self.logger.warning("Frame read failed, attempting to reinitialize camera...")
+                self.stop_camera()
+                time.sleep(1)
+                if self.start_camera():
+                    ret, frame = self.camera.read()
+                    if ret and frame is not None:
+                        return True, frame
+        return False, None
     
     def start_monitoring(self):
         """Start the parking monitoring process"""
@@ -217,7 +173,7 @@ class ParkingMonitor:
     
     def _check_all_spots(self):
         """Check all parking spots for cars"""
-        if not self.picam2 and (not self.camera or not self.camera.isOpened()):
+        if not self.camera or not self.camera.isOpened():
             # Only log this error occasionally to avoid spam
             if int(time.time()) % 60 == 0:  # Every minute
                 self.logger.warning("Camera not available - skipping spot detection")
