@@ -39,15 +39,34 @@ class ParkingMonitor:
     def start_camera(self):
         """Initialize and start the camera"""
         try:
-            self.camera = cv2.VideoCapture(Config.CAMERA_INDEX)
+            # Try V4L2 backend first (recommended for Raspberry Pi)
+            self.camera = cv2.VideoCapture(Config.CAMERA_INDEX, cv2.CAP_V4L2)
+            
+            # Set camera properties
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, Config.CAMERA_WIDTH)
             self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
             self.camera.set(cv2.CAP_PROP_FPS, Config.FRAME_RATE)
             
-            if not self.camera.isOpened():
-                raise Exception("Failed to open camera")
+            # Additional V4L2 settings for Raspberry Pi camera
+            self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
-            self.logger.info("Camera initialized successfully")
+            if not self.camera.isOpened():
+                # Try fallback to auto-detect backend
+                self.logger.warning("V4L2 backend failed, trying auto-detect...")
+                self.camera = cv2.VideoCapture(Config.CAMERA_INDEX)
+                self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, Config.CAMERA_WIDTH)
+                self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.CAMERA_HEIGHT)
+                self.camera.set(cv2.CAP_PROP_FPS, Config.FRAME_RATE)
+                
+                if not self.camera.isOpened():
+                    raise Exception("Failed to open camera with any backend")
+            
+            # Test reading a frame to ensure camera is working
+            ret, test_frame = self.camera.read()
+            if not ret:
+                raise Exception("Camera opened but cannot read frames")
+            
+            self.logger.info(f"Camera initialized successfully - Frame shape: {test_frame.shape}")
             return True
             
         except Exception as e:
