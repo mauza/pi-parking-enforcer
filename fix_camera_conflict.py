@@ -58,19 +58,19 @@ def test_camera_after_fix():
     print("\nTesting camera after stopping PipeWire...")
     
     try:
-        import cv2
+        from picamera2 import Picamera2
         
-        camera = cv2.VideoCapture(0)
-        if not camera.isOpened():
-            print("Camera still not accessible")
-            camera.release()
-            return False
+        camera = Picamera2()
+        config = camera.create_preview_configuration()
+        camera.configure(config)
+        camera.start()
         
         # Try to read a frame
-        ret, frame = camera.read()
-        camera.release()
+        frame = camera.capture_array()
+        camera.stop()
+        camera.close()
         
-        if ret and frame is not None:
+        if frame is not None and frame.size > 0:
             print(f"✅ Camera working! Frame shape: {frame.shape}")
             return True
         else:
@@ -78,7 +78,10 @@ def test_camera_after_fix():
             return False
             
     except ImportError:
-        print("OpenCV not available")
+        print("PiCamera2 not available")
+        return False
+    except Exception as e:
+        print(f"❌ Camera test failed: {e}")
         return False
 
 def main():

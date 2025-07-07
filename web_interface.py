@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, Response, request
 from flask_socketio import SocketIO, emit
+from picamera2 import Picamera2
 import cv2
 import numpy as np
 import json
@@ -10,6 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import io
 import base64
+from PIL import Image
 from config import Config
 from parking_monitor import ParkingMonitor
 from database import ParkingDatabase
@@ -140,12 +142,13 @@ def video_feed():
         while True:
             with frame_lock:
                 if camera_frame is not None:
-                    # Encode frame
-                    ret, buffer = cv2.imencode('.jpg', camera_frame)
-                    if ret:
-                        frame_data = buffer.tobytes()
-                        yield (b'--frame\r\n'
-                               b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
+                    # Convert numpy array to PIL Image and encode
+                    pil_image = Image.fromarray(camera_frame)
+                    img_buffer = io.BytesIO()
+                    pil_image.save(img_buffer, format='JPEG', quality=85)
+                    frame_data = img_buffer.getvalue()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
             
             time.sleep(0.1)  # 10 FPS
     

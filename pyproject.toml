@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "opencv-python>=4.9.0",
+    "picamera2>=0.3.0",
     "numpy>=1.26.0",
     "flask>=3.0.0",
     "flask-socketio>=5.3.0",
@@ -107,7 +107,7 @@ strict_equality = true
 
 [[tool.mypy.overrides]]
 module = [
-    "cv2.*",
+    "picamera2.*",
     "ultralytics.*",
     "slack_sdk.*",
     "flask_socketio.*",
