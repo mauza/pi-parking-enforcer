@@ -65,7 +65,7 @@ class ParkingMonitor:
         """Start the parking monitoring process"""
         if self.is_running:
             self.logger.warning("Monitoring is already running")
-            return False
+            return True  # Return True since it's already running
         
         # Try to start camera, but don't fail if camera is not available
         camera_available = self.start_camera()

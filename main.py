@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 from config import Config
 from parking_monitor import ParkingMonitor
-from web_interface import start_web_server, update_camera_frame
+from web_interface import start_web_server, update_camera_frame, set_parking_monitor
 from slack_integration import SlackIntegration
 
 class ParkingEnforcerApp:
@@ -48,6 +48,9 @@ class ParkingEnforcerApp:
         try:
             # Initialize parking monitor
             self.parking_monitor = ParkingMonitor()
+            
+            # Pass parking monitor instance to web interface
+            set_parking_monitor(self.parking_monitor)
             
             # Start web server in a separate thread
             self.web_server_thread = threading.Thread(

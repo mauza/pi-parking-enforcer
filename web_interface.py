@@ -18,10 +18,15 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'parking-enforcer-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Global parking monitor instance
+# Global parking monitor instance - will be set by main.py
 parking_monitor = None
 camera_frame = None
 frame_lock = threading.Lock()
+
+def set_parking_monitor(monitor_instance):
+    """Set the parking monitor instance from main.py"""
+    global parking_monitor
+    parking_monitor = monitor_instance
 
 @app.route('/')
 def index():
@@ -48,7 +53,7 @@ def start_monitoring():
     global parking_monitor
     
     if not parking_monitor:
-        parking_monitor = ParkingMonitor()
+        return jsonify({'success': False, 'message': 'Parking monitor not initialized'})
     
     if parking_monitor.start_monitoring():
         return jsonify({'success': True, 'message': 'Monitoring started'})
