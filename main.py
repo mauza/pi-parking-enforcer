@@ -64,6 +64,14 @@ class ParkingEnforcerApp:
                 self.is_running = True
                 self.logger.info("Parking enforcement system started successfully")
                 
+                # Check if camera is working
+                if not self.parking_monitor.camera or not self.parking_monitor.camera.isOpened():
+                    self.logger.warning("Camera not available - system running without camera monitoring")
+                    print("\n⚠️  Camera not available!")
+                    print("The camera may be in use by other processes (like PipeWire).")
+                    print("Run 'python3 fix_camera_conflict.py' to resolve camera conflicts.")
+                    print("The web interface will still work for viewing parking data.\n")
+                
                 # Main application loop
                 self.main_loop()
             else:

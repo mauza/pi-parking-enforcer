@@ -67,7 +67,10 @@ class ParkingMonitor:
                 time.sleep(2)
                 ret, test_frame = self.camera.read()
                 if not ret or test_frame is None:
-                    raise Exception("Camera opened but cannot read frames")
+                    # Check if camera is being used by other processes
+                    self.logger.warning("Camera opened but cannot read frames - may be in use by other processes")
+                    self.logger.info("Try stopping PipeWire or other camera applications")
+                    raise Exception("Camera opened but cannot read frames - likely in use by other processes")
             
             self.logger.info(f"Camera initialized successfully with OpenCV - Frame shape: {test_frame.shape}")
             return True
