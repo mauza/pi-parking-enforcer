@@ -177,7 +177,8 @@ def start_web_server():
                 host=Config.WEB_HOST, 
                 port=Config.WEB_PORT, 
                 debug=Config.DEBUG,
-                allow_unsafe_werkzeug=True)
+                allow_unsafe_werkzeug=True,
+                use_reloader=False)  # Disable reloader to avoid signal issues
 
 if __name__ == '__main__':
     start_web_server() 

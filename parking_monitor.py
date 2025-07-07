@@ -67,8 +67,10 @@ class ParkingMonitor:
             self.logger.warning("Monitoring is already running")
             return False
         
-        if not self.start_camera():
-            return False
+        # Try to start camera, but don't fail if camera is not available
+        camera_available = self.start_camera()
+        if not camera_available:
+            self.logger.warning("Camera not available - system will run without camera monitoring")
         
         self.is_running = True
         self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
@@ -130,12 +132,16 @@ class ParkingMonitor:
     def _check_all_spots(self):
         """Check all parking spots for cars"""
         if not self.camera or not self.camera.isOpened():
-            self.logger.error("Camera not available")
+            # Only log this error occasionally to avoid spam
+            if int(time.time()) % 60 == 0:  # Every minute
+                self.logger.warning("Camera not available - skipping spot detection")
             return
         
         ret, frame = self.camera.read()
         if not ret:
-            self.logger.error("Failed to read frame from camera")
+            # Only log this error occasionally to avoid spam
+            if int(time.time()) % 30 == 0:  # Every 30 seconds
+                self.logger.warning("Failed to read frame from camera - this may be normal if no camera is connected")
             return
         
         for spot in Config.PARKING_SPOTS:

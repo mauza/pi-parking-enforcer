@@ -6,7 +6,6 @@ A comprehensive parking monitoring system for Raspberry Pi
 
 import sys
 import os
-import signal
 import logging
 import threading
 import time
@@ -25,10 +24,6 @@ class ParkingEnforcerApp:
         # Setup logging
         self.setup_logging()
         self.logger = logging.getLogger(__name__)
-        
-        # Setup signal handlers
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.signal(signal.SIGTERM, self.signal_handler)
     
     def setup_logging(self):
         """Setup logging configuration"""
@@ -45,11 +40,6 @@ class ParkingEnforcerApp:
                 logging.StreamHandler(sys.stdout)
             ]
         )
-    
-    def signal_handler(self, signum, frame):
-        """Handle shutdown signals"""
-        self.logger.info(f"Received signal {signum}, shutting down...")
-        self.shutdown()
     
     def start(self):
         """Start the parking enforcement application"""
@@ -102,6 +92,10 @@ class ParkingEnforcerApp:
                     ret, frame = self.parking_monitor.camera.read()
                     if ret:
                         update_camera_frame(frame)
+                    else:
+                        # Log camera read failures less frequently
+                        if int(time.time()) % 30 == 0:  # Every 30 seconds
+                            self.logger.warning("Camera frame read failed - this may be normal if no camera is connected")
                 
                 # Check system health
                 self.check_system_health()
@@ -162,12 +156,16 @@ def main():
     # Create and start application
     app = ParkingEnforcerApp()
     
-    if app.start():
-        print("Application started successfully!")
-        print("Press Ctrl+C to stop")
-    else:
-        print("Failed to start application")
-        sys.exit(1)
+    try:
+        if app.start():
+            print("Application started successfully!")
+            print("Press Ctrl+C to stop")
+        else:
+            print("Failed to start application")
+            sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        app.shutdown()
 
 if __name__ == "__main__":
     main() 
