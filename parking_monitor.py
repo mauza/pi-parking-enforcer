@@ -41,6 +41,9 @@ class ParkingMonitor:
     def start_camera(self):
         """Initialize and start the camera using PiCamera2"""
         try:
+            # First, try to release any existing camera handles
+            self._release_camera_resources()
+            
             # Initialize camera
             self.camera = Picamera2()
             
@@ -53,19 +56,20 @@ class ParkingMonitor:
             self.camera.start()
             
             # Allow camera to warm up
-            time.sleep(1)
+            time.sleep(2)
             
             # Test reading a frame to ensure camera is working
             test_frame = self.camera.capture_array()
             if test_frame is None or test_frame.size == 0:
                 # Try again with a longer delay
-                time.sleep(2)
+                time.sleep(3)
                 test_frame = self.camera.capture_array()
                 if test_frame is None or test_frame.size == 0:
                     # Check if camera is being used by other processes
                     self.logger.warning("Camera opened but cannot read frames - may be in use by other processes")
                     self.logger.info("Try stopping PipeWire or other camera applications")
-                    raise Exception("Camera opened but cannot read frames - likely in use by other processes")
+                    self.stop_camera()
+                    return False
             
             self.logger.info(f"Camera initialized successfully with PiCamera2 - Frame shape: {test_frame.shape}")
             return True
@@ -80,6 +84,38 @@ class ParkingMonitor:
                     pass
                 self.camera = None
             return False
+    
+    def _release_camera_resources(self):
+        """Release any existing camera resources to prevent conflicts"""
+        try:
+            # Try to stop any existing camera instances
+            if hasattr(self, 'camera') and self.camera:
+                try:
+                    self.camera.stop()
+                    self.camera.close()
+                except:
+                    pass
+                self.camera = None
+            
+            # Small delay to allow resources to be released
+            time.sleep(1)
+            
+            # Try to kill any processes that might be using the camera
+            try:
+                import subprocess
+                # Check for processes using video devices
+                result = subprocess.run(['lsof', '/dev/video0'], capture_output=True, text=True)
+                if result.stdout:
+                    self.logger.info("Found processes using camera, attempting to release...")
+                    # Try to stop PipeWire if it's running
+                    subprocess.run(['systemctl', 'stop', 'pipewire'], capture_output=True)
+                    subprocess.run(['systemctl', 'stop', 'pipewire-pulse'], capture_output=True)
+                    time.sleep(2)
+            except:
+                pass
+                
+        except Exception as e:
+            self.logger.debug(f"Error releasing camera resources: {e}")
     
     def stop_camera(self):
         """Stop and release the camera"""
@@ -103,7 +139,7 @@ class ParkingMonitor:
                     # Try to reinitialize camera if frame reading fails
                     self.logger.warning("Frame read failed, attempting to reinitialize camera...")
                     self.stop_camera()
-                    time.sleep(1)
+                    time.sleep(2)
                     if self.start_camera():
                         frame = self.camera.capture_array()
                         if frame is not None and frame.size > 0:
@@ -112,7 +148,7 @@ class ParkingMonitor:
                 self.logger.error(f"Error reading frame: {e}")
                 # Try to reinitialize camera
                 self.stop_camera()
-                time.sleep(1)
+                time.sleep(2)
                 if self.start_camera():
                     try:
                         frame = self.camera.capture_array()

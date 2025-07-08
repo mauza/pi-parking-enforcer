@@ -69,7 +69,7 @@ class ParkingEnforcerApp:
                     self.logger.warning("Camera not available - system running without camera monitoring")
                     print("\n⚠️  Camera not available!")
                     print("The camera may be in use by other processes (like PipeWire).")
-                    print("Run 'python3 fix_camera_conflict.py' to resolve camera conflicts.")
+                    print("Run 'python3 reset_camera.py' to resolve camera conflicts.")
                     print("The web interface will still work for viewing parking data.\n")
                 else:
                     # Test if camera is actually working by trying to read a frame
@@ -79,13 +79,15 @@ class ParkingEnforcerApp:
                             self.logger.warning("Camera opened but cannot read frames - may be in use by other processes")
                             print("\n⚠️  Camera opened but cannot read frames!")
                             print("The camera may be in use by other processes (like PipeWire).")
-                            print("Run 'python3 fix_camera_conflict.py' to resolve camera conflicts.")
+                            print("Run 'python3 reset_camera.py' to resolve camera conflicts.")
                             print("The web interface will still work for viewing parking data.\n")
+                        else:
+                            print(f"✅ Camera working! Frame shape: {test_frame.shape}")
                     except Exception as e:
                         self.logger.warning(f"Camera test failed: {e}")
                         print("\n⚠️  Camera test failed!")
                         print("The camera may be in use by other processes (like PipeWire).")
-                        print("Run 'python3 fix_camera_conflict.py' to resolve camera conflicts.")
+                        print("Run 'python3 reset_camera.py' to resolve camera conflicts.")
                         print("The web interface will still work for viewing parking data.\n")
                 
                 # Main application loop
@@ -111,23 +113,34 @@ class ParkingEnforcerApp:
         """Main application loop"""
         self.logger.info("Entering main application loop")
         
+        last_frame_update = 0
+        frame_update_interval = 0.1  # Update frames at 10 FPS for web interface
+        
         while self.is_running:
             try:
-                # Update camera frame for web interface
-                if self.parking_monitor:
-                    ret, frame = self.parking_monitor.read_frame()
-                    if ret:
-                        update_camera_frame(frame)
+                current_time = time.time()
+                
+                # Update camera frame for web interface at higher frequency
+                if current_time - last_frame_update >= frame_update_interval:
+                    if self.parking_monitor and self.parking_monitor.camera:
+                        ret, frame = self.parking_monitor.read_frame()
+                        if ret:
+                            update_camera_frame(frame)
+                        else:
+                            # Log camera read failures less frequently
+                            if int(current_time) % 30 == 0:  # Every 30 seconds
+                                self.logger.warning("Camera frame read failed - this may be normal if no camera is connected")
                     else:
-                        # Log camera read failures less frequently
-                        if int(time.time()) % 30 == 0:  # Every 30 seconds
-                            self.logger.warning("Camera frame read failed - this may be normal if no camera is connected")
+                        # Camera not available, update with None to trigger fallback image
+                        update_camera_frame(None)
+                    
+                    last_frame_update = current_time
                 
                 # Check system health
                 self.check_system_health()
                 
                 # Sleep for a short interval
-                time.sleep(1)
+                time.sleep(0.05)  # 20 FPS for main loop
                 
             except KeyboardInterrupt:
                 self.logger.info("Keyboard interrupt received")

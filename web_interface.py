@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import io
 import base64
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from config import Config
 from parking_monitor import ParkingMonitor
 from database import ParkingDatabase
@@ -156,11 +156,59 @@ def video_feed():
                     frame_data = img_buffer.getvalue()
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
+                else:
+                    # Create a fallback image when no camera frame is available
+                    fallback_image = create_fallback_image()
+                    img_buffer = io.BytesIO()
+                    fallback_image.save(img_buffer, format='JPEG', quality=85)
+                    frame_data = img_buffer.getvalue()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
             
             time.sleep(0.1)  # 10 FPS
     
     return Response(generate_frames(), 
                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+def create_fallback_image():
+    """Create a fallback image when camera is not available"""
+    # Create a 640x480 image with a message
+    width, height = 640, 480
+    image = Image.new('RGB', (width, height), color='#2c3e50')
+    
+    # Add text to the image
+    draw = ImageDraw.Draw(image)
+    
+    # Try to use a default font, fallback to basic if not available
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+    except:
+        font = ImageFont.load_default()
+    
+    # Center the text
+    text = "Camera Not Available"
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    x = (width - text_width) // 2
+    y = (height - text_height) // 2 - 20
+    
+    # Draw the main text
+    draw.text((x, y), text, fill='white', font=font)
+    
+    # Add subtitle
+    subtitle = "Check camera connection"
+    bbox = draw.textbbox((0, 0), subtitle, font=font)
+    sub_width = bbox[2] - bbox[0]
+    sub_x = (width - sub_width) // 2
+    draw.text((sub_x, y + 40), subtitle, fill='#bdc3c7', font=font)
+    
+    # Add camera icon or symbol
+    camera_symbol = "📷"
+    # For now, just add text representation
+    draw.text((width // 2 - 20, y + 80), camera_symbol, fill='#3498db', font=font)
+    
+    return image
 
 @socketio.on('connect')
 def handle_connect():
