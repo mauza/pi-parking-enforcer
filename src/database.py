@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 import json
-from config import Config
+from .config import Config
 
 class ParkingDatabase:
     def __init__(self, db_path: str = None):

@@ -12,9 +12,9 @@ import matplotlib.dates as mdates
 import io
 import base64
 from PIL import Image, ImageDraw, ImageFont
-from config import Config
-from parking_monitor import ParkingMonitor
-from database import ParkingDatabase
+from .config import Config
+from .parking_monitor import ParkingMonitor
+from .database import ParkingDatabase
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'parking-enforcer-secret-key'

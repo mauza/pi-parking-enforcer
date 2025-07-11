@@ -4,10 +4,10 @@ import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
-from config import Config
-from database import ParkingDatabase
-from car_detector import CarDetector
-from slack_integration import SlackIntegration
+from .config import Config
+from .database import ParkingDatabase
+from .car_detector import CarDetector
+from .slack_integration import SlackIntegration
 from picamera2 import Picamera2
 
 

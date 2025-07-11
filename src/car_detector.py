@@ -4,7 +4,7 @@ from ultralytics import YOLO
 from typing import List, Dict, Tuple, Optional
 import os
 from datetime import datetime
-from config import Config
+from .config import Config
 import uuid
 
 class CarDetector:

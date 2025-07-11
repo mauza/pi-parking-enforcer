@@ -3,7 +3,7 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from typing import List, Dict, Optional
 from datetime import datetime
-from config import Config
+from .config import Config
 import logging
 
 class SlackIntegration:
