@@ -51,4 +51,4 @@ class Config:
     
     # Patrol region as quadrilateral points (x, y) - set to None to use full frame
     # Points in order: top-left, top-right, bottom-right, bottom-left
-    PATROL_REGION = [(600, 400), (1300, 350), (1350, 425), (650, 450)]  # Askew quadrilateral 
+    PATROL_REGION = [(620, 440), (1220, 400), (1270, 400), (670, 470)]  # Askew quadrilateral 
