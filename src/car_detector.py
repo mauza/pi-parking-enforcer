@@ -34,8 +34,23 @@ class CarDetector:
         # Get bounding rectangle of the quadrilateral
         x, y, w, h = cv2.boundingRect(pts)
         
+        # Ensure coordinates are within frame bounds
+        x = max(0, x)
+        y = max(0, y)
+        w = min(w, frame.shape[1] - x)
+        h = min(h, frame.shape[0] - y)
+        
+        # Check if the region is valid
+        if w <= 0 or h <= 0:
+            # Return empty frame if region is invalid
+            return np.zeros((1, 1, frame.shape[2] if len(frame.shape) == 3 else 1), dtype=frame.dtype), (0, 0)
+        
         # Crop to bounding rectangle
         cropped = frame[y:y+h, x:x+w]
+        
+        # Check if cropped frame is valid
+        if cropped.size == 0:
+            return np.zeros((1, 1, frame.shape[2] if len(frame.shape) == 3 else 1), dtype=frame.dtype), (0, 0)
         
         # Create mask for the quadrilateral
         mask = np.zeros((h, w), dtype=np.uint8)
@@ -45,8 +60,13 @@ class CarDetector:
         
         # Apply mask to cropped frame
         if len(cropped.shape) == 3:
-            mask_3d = np.stack([mask] * 3, axis=2)
-            masked_frame = cv2.bitwise_and(cropped, mask_3d)
+            # Ensure mask has the same number of channels as the frame
+            if cropped.shape[2] == 4:  # RGBA
+                mask_4d = np.stack([mask] * 4, axis=2)
+                masked_frame = cv2.bitwise_and(cropped, mask_4d)
+            else:  # RGB
+                mask_3d = np.stack([mask] * 3, axis=2)
+                masked_frame = cv2.bitwise_and(cropped, mask_3d)
         else:
             masked_frame = cv2.bitwise_and(cropped, mask)
         
