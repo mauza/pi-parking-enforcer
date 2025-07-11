@@ -10,10 +10,10 @@ import logging
 import threading
 import time
 from datetime import datetime
-from config import Config
-from parking_monitor import ParkingMonitor
-from web_interface import start_web_server, update_camera_frame, set_parking_monitor
-from slack_integration import SlackIntegration
+from src.config import Config
+from src.parking_monitor import ParkingMonitor
+from src.web_interface import start_web_server, update_camera_frame, set_parking_monitor
+from src.slack_integration import SlackIntegration
 
 class ParkingEnforcerApp:
     def __init__(self):
