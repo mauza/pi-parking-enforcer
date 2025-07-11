@@ -18,14 +18,61 @@ class CarDetector:
         # Car class IDs in COCO dataset (car=2, truck=7, bus=5)
         self.car_classes = [2, 7, 5]
     
+    def _is_quadrilateral_region(self, patrol_region) -> bool:
+        """Check if patrol region is a quadrilateral (list of 4 points)"""
+        return isinstance(patrol_region, list) and len(patrol_region) == 4 and all(len(point) == 2 for point in patrol_region)
+    
+    def _is_rectangle_region(self, patrol_region) -> bool:
+        """Check if patrol region is a rectangle (x, y, w, h)"""
+        return isinstance(patrol_region, tuple) and len(patrol_region) == 4
+    
+    def _crop_to_quadrilateral(self, frame: np.ndarray, points: List[Tuple[int, int]]) -> Tuple[np.ndarray, Tuple[int, int]]:
+        """Crop frame to quadrilateral region and return cropped frame with offset"""
+        # Convert points to numpy array
+        pts = np.array(points, np.int32)
+        
+        # Get bounding rectangle of the quadrilateral
+        x, y, w, h = cv2.boundingRect(pts)
+        
+        # Crop to bounding rectangle
+        cropped = frame[y:y+h, x:x+w]
+        
+        # Create mask for the quadrilateral
+        mask = np.zeros((h, w), dtype=np.uint8)
+        # Adjust points relative to bounding rectangle
+        adjusted_pts = pts - np.array([x, y])
+        cv2.fillPoly(mask, [adjusted_pts], 255)
+        
+        # Apply mask to cropped frame
+        if len(cropped.shape) == 3:
+            mask_3d = np.stack([mask] * 3, axis=2)
+            masked_frame = cv2.bitwise_and(cropped, mask_3d)
+        else:
+            masked_frame = cv2.bitwise_and(cropped, mask)
+        
+        return masked_frame, (x, y)
+    
+    def _draw_quadrilateral(self, frame: np.ndarray, points: List[Tuple[int, int]], color: Tuple[int, int, int] = (255, 0, 0), thickness: int = 2):
+        """Draw quadrilateral outline on frame"""
+        pts = np.array(points, np.int32)
+        cv2.polylines(frame, [pts], True, color, thickness)
+    
     def detect_cars_in_frame(self, frame: np.ndarray) -> List[Dict]:
         """Detect cars in the entire frame or patrol region if specified"""
         # Use patrol region if specified
         patrol_region = getattr(Config, 'PATROL_REGION', None)
         if patrol_region:
-            x, y, w, h = patrol_region
-            frame = frame[y:y+h, x:x+w]
-            region_offset = (x, y)
+            if self._is_quadrilateral_region(patrol_region):
+                # Handle quadrilateral region
+                frame, region_offset = self._crop_to_quadrilateral(frame, patrol_region)
+            elif self._is_rectangle_region(patrol_region):
+                # Handle rectangle region (backward compatibility)
+                x, y, w, h = patrol_region
+                frame = frame[y:y+h, x:x+w]
+                region_offset = (x, y)
+            else:
+                # Invalid patrol region format
+                region_offset = (0, 0)
         else:
             region_offset = (0, 0)
         # Convert RGBA to RGB if needed for YOLO model
@@ -166,8 +213,13 @@ class CarDetector:
         # Draw patrol region if set
         patrol_region = getattr(Config, 'PATROL_REGION', None)
         if patrol_region:
-            x, y, w, h = patrol_region
-            cv2.rectangle(frame_copy, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            if self._is_quadrilateral_region(patrol_region):
+                # Draw quadrilateral region
+                self._draw_quadrilateral(frame_copy, patrol_region, (255, 0, 0), 2)
+            elif self._is_rectangle_region(patrol_region):
+                # Draw rectangle region (backward compatibility)
+                x, y, w, h = patrol_region
+                cv2.rectangle(frame_copy, (x, y), (x + w, y + h), (255, 0, 0), 2)
         # Draw spot boundary if provided
         if spot_coords:
             x, y, w, h = spot_coords

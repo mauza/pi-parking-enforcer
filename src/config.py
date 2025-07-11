@@ -49,5 +49,6 @@ class Config:
     IMAGE_STORAGE_PATH = os.getenv('IMAGE_STORAGE_PATH', 'captured_images')
     MAX_STORED_IMAGES = int(os.getenv('MAX_STORED_IMAGES', 1000)) 
     
-    # Patrol region (x, y, width, height) - set to None to use full frame
-    PATROL_REGION = (100, 50, 400, 300)  # Example values, adjust as needed 
+    # Patrol region as quadrilateral points (x, y) - set to None to use full frame
+    # Points in order: top-left, top-right, bottom-right, bottom-left
+    PATROL_REGION = [(600, 400), (1300, 350), (1350, 425), (650, 450)]  # Askew quadrilateral 

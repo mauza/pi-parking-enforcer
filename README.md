@@ -106,6 +106,22 @@ PARKING_SPOTS = [
 
 The `coords` are (x, y, width, height) in pixels.
 
+### Patrol Region Configuration
+
+The system supports both rectangular and quadrilateral patrol regions. Edit `config.py` to define your patrol region:
+
+**Rectangular region (legacy format):**
+```python
+PATROL_REGION = (100, 50, 400, 300)  # (x, y, width, height)
+```
+
+**Quadrilateral region (new format):**
+```python
+PATROL_REGION = [(600, 400), (1300, 350), (1350, 425), (650, 450)]  # Four (x, y) points
+```
+
+The quadrilateral format allows for askew regions that don't align with the video frame axes.
+
 ### Slack Integration (Optional)
 
 1. Create a Slack app at https://api.slack.com/apps
