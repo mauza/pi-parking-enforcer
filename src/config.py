@@ -24,7 +24,7 @@ class Config:
     
     # Detection settings
     DETECTION_INTERVAL = float(os.getenv('DETECTION_INTERVAL', 5.0))  # seconds
-    CONFIDENCE_THRESHOLD = float(os.getenv('CONFIDENCE_THRESHOLD', 0.4))
+    CONFIDENCE_THRESHOLD = float(os.getenv('CONFIDENCE_THRESHOLD', 0.3))
     CAR_DETECTION_MODEL = os.getenv('CAR_DETECTION_MODEL', 'yolov8n.pt')
     
     # Database settings
@@ -51,4 +51,4 @@ class Config:
     
     # Patrol region as quadrilateral points (x, y) - set to None to use full frame
     # Points in order: top-left, top-right, bottom-right, bottom-left
-    PATROL_REGION = [(590, 440), (1200, 390), (1330, 460), (700, 530)]  # Askew quadrilateral 
+    PATROL_REGION = [(590, 440), (1190, 410), (1330, 460), (700, 530)]  # Askew quadrilateral 
