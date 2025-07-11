@@ -24,7 +24,7 @@ class Config:
     
     # Detection settings
     DETECTION_INTERVAL = float(os.getenv('DETECTION_INTERVAL', 5.0))  # seconds
-    CONFIDENCE_THRESHOLD = float(os.getenv('CONFIDENCE_THRESHOLD', 0.3))
+    CONFIDENCE_THRESHOLD = float(os.getenv('CONFIDENCE_THRESHOLD', 0.1))
     CAR_DETECTION_MODEL = os.getenv('CAR_DETECTION_MODEL', 'yolov8n.pt')
     
     # Database settings
