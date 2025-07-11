@@ -19,16 +19,22 @@ class CarDetector:
         self.car_classes = [2, 7, 5]
     
     def detect_cars_in_frame(self, frame: np.ndarray) -> List[Dict]:
-        """Detect cars in the entire frame"""
+        """Detect cars in the entire frame or patrol region if specified"""
+        # Use patrol region if specified
+        patrol_region = getattr(Config, 'PATROL_REGION', None)
+        if patrol_region:
+            x, y, w, h = patrol_region
+            frame = frame[y:y+h, x:x+w]
+            region_offset = (x, y)
+        else:
+            region_offset = (0, 0)
         # Convert RGBA to RGB if needed for YOLO model
         if frame.shape[2] == 4:  # RGBA
             frame_rgb = frame[:, :, :3]  # Drop alpha channel
         else:
             frame_rgb = frame
-            
         results = self.model(frame_rgb, verbose=False)
         detections = []
-        
         for result in results:
             boxes = result.boxes
             if boxes is not None:
@@ -38,12 +44,13 @@ class CarDetector:
                         confidence = float(box.conf[0])
                         if confidence >= self.confidence_threshold:
                             x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                            # Adjust for patrol region offset
+                            x1, y1, x2, y2 = int(x1 + region_offset[0]), int(y1 + region_offset[1]), int(x2 + region_offset[0]), int(y2 + region_offset[1])
                             detections.append({
-                                'bbox': (int(x1), int(y1), int(x2), int(y2)),
+                                'bbox': (x1, y1, x2, y2),
                                 'confidence': confidence,
                                 'class_id': int(box.cls[0])
                             })
-        
         return detections
     
     def detect_cars_in_spot(self, frame: np.ndarray, spot_coords: Tuple[int, int, int, int]) -> List[Dict]:
@@ -150,31 +157,41 @@ class CarDetector:
     
     def draw_detections_on_frame(self, frame: np.ndarray, detections: List[Dict], 
                                spot_coords: Tuple[int, int, int, int] = None) -> np.ndarray:
-        """Draw detection boxes and labels on the frame"""
+        """Draw square boxes and labels on the frame, and draw patrol region if set"""
         # Convert RGBA to RGB if needed for drawing
         if frame.shape[2] == 4:  # RGBA
             frame_copy = frame[:, :, :3].copy()  # Drop alpha channel
         else:
             frame_copy = frame.copy()
-        
+        # Draw patrol region if set
+        patrol_region = getattr(Config, 'PATROL_REGION', None)
+        if patrol_region:
+            x, y, w, h = patrol_region
+            cv2.rectangle(frame_copy, (x, y), (x + w, y + h), (255, 0, 0), 2)
         # Draw spot boundary if provided
         if spot_coords:
             x, y, w, h = spot_coords
             cv2.rectangle(frame_copy, (x, y), (x + w, y + h), (255, 0, 0), 2)
-        
-        # Draw detections
+        # Draw detections as squares
         for detection in detections:
             bbox = detection['bbox']
             confidence = detection['confidence']
-            
-            # Draw bounding box
-            cv2.rectangle(frame_copy, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
-            
+            # Calculate square
+            x1, y1, x2, y2 = bbox
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+            side = max(x2 - x1, y2 - y1)
+            half_side = side // 2
+            sq_x1 = cx - half_side
+            sq_y1 = cy - half_side
+            sq_x2 = cx + half_side
+            sq_y2 = cy + half_side
+            # Draw square
+            cv2.rectangle(frame_copy, (sq_x1, sq_y1), (sq_x2, sq_y2), (0, 255, 0), 2)
             # Draw confidence label
             label = f"Car: {confidence:.2f}"
-            cv2.putText(frame_copy, label, (bbox[0], bbox[1] - 10), 
+            cv2.putText(frame_copy, label, (sq_x1, sq_y1 - 10), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        
         return frame_copy
     
     def cleanup_old_images(self):

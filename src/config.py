@@ -48,3 +48,6 @@ class Config:
     # Image storage
     IMAGE_STORAGE_PATH = os.getenv('IMAGE_STORAGE_PATH', 'captured_images')
     MAX_STORED_IMAGES = int(os.getenv('MAX_STORED_IMAGES', 1000)) 
+    
+    # Patrol region (x, y, width, height) - set to None to use full frame
+    PATROL_REGION = (100, 50, 400, 300)  # Example values, adjust as needed 

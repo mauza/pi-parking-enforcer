@@ -119,7 +119,10 @@ class ParkingEnforcerApp:
                     if self.parking_monitor and self.parking_monitor.camera:
                         ret, frame = self.parking_monitor.read_frame()
                         if ret:
-                            update_camera_frame(frame)
+                            # Annotate frame with car detections and patrol region
+                            detections = self.parking_monitor.car_detector.detect_cars_in_frame(frame)
+                            annotated_frame = self.parking_monitor.car_detector.draw_detections_on_frame(frame, detections)
+                            update_camera_frame(annotated_frame)
                         else:
                             # Log camera read failures less frequently
                             if int(current_time) % 30 == 0:  # Every 30 seconds
