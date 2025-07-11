@@ -67,7 +67,6 @@ class ParkingMonitor:
                 if test_frame is None or test_frame.size == 0:
                     # Check if camera is being used by other processes
                     self.logger.warning("Camera opened but cannot read frames - may be in use by other processes")
-                    self.logger.info("Try stopping PipeWire or other camera applications")
                     self.stop_camera()
                     return False
             
@@ -100,20 +99,9 @@ class ParkingMonitor:
             # Small delay to allow resources to be released
             time.sleep(1)
             
-            # Try to kill any processes that might be using the camera
-            try:
-                import subprocess
-                # Check for processes using video devices
-                result = subprocess.run(['lsof', '/dev/video0'], capture_output=True, text=True)
-                if result.stdout:
-                    self.logger.info("Found processes using camera, attempting to release...")
-                    # Try to stop PipeWire if it's running
-                    subprocess.run(['systemctl', 'stop', 'pipewire'], capture_output=True)
-                    subprocess.run(['systemctl', 'stop', 'pipewire-pulse'], capture_output=True)
-                    time.sleep(2)
-            except:
-                pass
-                
+            # Previously: tried to kill processes using the camera and stop PipeWire. Now removed.
+            # If you want to add custom camera resource cleanup, do it here.
+            
         except Exception as e:
             self.logger.debug(f"Error releasing camera resources: {e}")
     
