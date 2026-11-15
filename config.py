@@ -6,20 +6,21 @@ load_dotenv()
 class Config:
     # Camera settings
     CAMERA_INDEX = int(os.getenv('CAMERA_INDEX', 0))
-    CAMERA_WIDTH = int(os.getenv('CAMERA_WIDTH', 640))
-    CAMERA_HEIGHT = int(os.getenv('CAMERA_HEIGHT', 480))
+    CAMERA_WIDTH = int(os.getenv('CAMERA_WIDTH', 1920))
+    CAMERA_HEIGHT = int(os.getenv('CAMERA_HEIGHT', 1080))
     FRAME_RATE = int(os.getenv('FRAME_RATE', 30))
     
     # Parking spot configuration
     # Define parking spots as (x, y, width, height) rectangles
+    # Updated coordinates for 1920x1080 resolution
     PARKING_SPOTS = [
-        # Example spots - adjust these based on your camera view
-        {"id": 1, "coords": (50, 100, 150, 200), "name": "Spot A1"},
-        {"id": 2, "coords": (220, 100, 150, 200), "name": "Spot A2"},
-        {"id": 3, "coords": (390, 100, 150, 200), "name": "Spot A3"},
-        {"id": 4, "coords": (50, 320, 150, 200), "name": "Spot B1"},
-        {"id": 5, "coords": (220, 320, 150, 200), "name": "Spot B2"},
-        {"id": 6, "coords": (390, 320, 150, 200), "name": "Spot B3"},
+        # Example spots - adjust these based on your camera view at 1920x1080
+        {"id": 1, "coords": (150, 300, 450, 600), "name": "Spot A1"},
+        {"id": 2, "coords": (660, 300, 450, 600), "name": "Spot A2"},
+        {"id": 3, "coords": (1170, 300, 450, 600), "name": "Spot A3"},
+        {"id": 4, "coords": (150, 960, 450, 600), "name": "Spot B1"},
+        {"id": 5, "coords": (660, 960, 450, 600), "name": "Spot B2"},
+        {"id": 6, "coords": (1170, 960, 450, 600), "name": "Spot B3"},
     ]
     
     # Detection settings

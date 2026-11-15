@@ -172,8 +172,8 @@ def video_feed():
 
 def create_fallback_image():
     """Create a fallback image when camera is not available"""
-    # Create a 640x480 image with a message
-    width, height = 640, 480
+    # Create a 1920x1080 image with a message
+    width, height = 1920, 1080
     image = Image.new('RGB', (width, height), color='#2c3e50')
     
     # Add text to the image
@@ -181,7 +181,7 @@ def create_fallback_image():
     
     # Try to use a default font, fallback to basic if not available
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
     except:
         font = ImageFont.load_default()
     
@@ -191,7 +191,7 @@ def create_fallback_image():
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
     x = (width - text_width) // 2
-    y = (height - text_height) // 2 - 20
+    y = (height - text_height) // 2 - 40
     
     # Draw the main text
     draw.text((x, y), text, fill='white', font=font)
@@ -201,12 +201,12 @@ def create_fallback_image():
     bbox = draw.textbbox((0, 0), subtitle, font=font)
     sub_width = bbox[2] - bbox[0]
     sub_x = (width - sub_width) // 2
-    draw.text((sub_x, y + 40), subtitle, fill='#bdc3c7', font=font)
+    draw.text((sub_x, y + 80), subtitle, fill='#bdc3c7', font=font)
     
     # Add camera icon or symbol
     camera_symbol = "📷"
     # For now, just add text representation
-    draw.text((width // 2 - 20, y + 80), camera_symbol, fill='#3498db', font=font)
+    draw.text((width // 2 - 40, y + 160), camera_symbol, fill='#3498db', font=font)
     
     return image
 
